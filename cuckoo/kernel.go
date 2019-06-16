@@ -20,16 +20,16 @@ typedef u64 nonce_t;
 #define DUCK_SIZE_A 129L
 #define DUCK_SIZE_B 83L
 
-#define DUCK_A_EDGES (DUCK_SIZE_A * 1024L)
+#define DUCK_A_EDGES (DUCK_SIZE_A * 256L)
 #define DUCK_A_EDGES_64 (DUCK_A_EDGES * 64L)
 
-#define DUCK_B_EDGES (DUCK_SIZE_B * 1024L)
+#define DUCK_B_EDGES (DUCK_SIZE_B * 256L)
 #define DUCK_B_EDGES_64 (DUCK_B_EDGES * 64L)
 
 #define EDGE_BLOCK_SIZE (64)
 #define EDGE_BLOCK_MASK (EDGE_BLOCK_SIZE - 1)
 
-#define EDGEBITS 29
+#define EDGEBITS 20
 // number of edges
 #define NEDGES ((node_t)1 << EDGEBITS)
 // used to mask siphash output
@@ -71,7 +71,7 @@ bool Read2bCounter(__local u32 * ecounters, const int bucket)
 }
 
 __attribute__((reqd_work_group_size(128, 1, 1)))
-__kernel  void FluffySeed2A(const u64 v0i, const u64 v1i, const u64 v2i, const u64 v3i, __global ulong4 * bufferA, __global ulong4 * bufferB, __global u32 * indexes)
+__kernel  void FluffySeed2A(const u64 v0i, const u64 v1i, const u64 v2i, const u64 v3i, __global ulong4 * bufferA, __global ulong4 * bufferB,__global u32 * indexes)
 {
 	const int gid = get_global_id(0);
 	const short lid = get_local_id(0);
@@ -91,9 +91,9 @@ __kernel  void FluffySeed2A(const u64 v0i, const u64 v1i, const u64 v2i, const u
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 
-	for (int i = 0; i < 1024 * 2; i += EDGE_BLOCK_SIZE)
+	for (int i = 0; i < 32 * 2; i += EDGE_BLOCK_SIZE)
 	{
-		u64 blockNonce = gid * (1024 * 2) + i;
+		u64 blockNonce = gid * (32 * 2) + i;
 
 		v0 = v0i;
 		v1 = v1i;
@@ -124,6 +124,7 @@ __kernel  void FluffySeed2A(const u64 v0i, const u64 v1i, const u64 v2i, const u
 			barrier(CLK_LOCAL_MEM_FENCE);
 
 			int counter = atomic_add(counters + bucket, (u32)1);
+		
 			int counterLocal = counter % 16;
 			tmp[bucket][counterLocal] = hash.x | ((u64)hash.y << 32);
 
@@ -258,7 +259,7 @@ __kernel  void FluffySeed2B(const __global uint2 * source, __global ulong4 * des
 	}
 }
 
-__attribute__((reqd_work_group_size(1024, 1, 1)))
+__attribute__((reqd_work_group_size(256, 1, 1)))
 __kernel   void FluffyRound1(const __global uint2 * source1, const __global uint2 * source2, __global uint2 * destination, const __global int * sourceIndexes, __global int * destinationIndexes, const int bktInSize, const int bktOutSize)
 {
 	const int lid = get_local_id(0);
@@ -319,7 +320,7 @@ __kernel   void FluffyRound1(const __global uint2 * source1, const __global uint
 
 }
 
-__attribute__((reqd_work_group_size(1024, 1, 1)))
+__attribute__((reqd_work_group_size(256, 1, 1)))
 __kernel   void FluffyRoundN(const __global uint2 * source, __global uint2 * destination, const __global int * sourceIndexes, __global int * destinationIndexes)
 {
 	const int lid = get_local_id(0);
@@ -441,7 +442,7 @@ __kernel   void FluffyRoundN_64(const __global uint2 * source, __global uint2 * 
 
 }
 
-__attribute__((reqd_work_group_size(1024, 1, 1)))
+__attribute__((reqd_work_group_size(256, 1, 1)))
 __kernel void FluffyTail(const __global uint2 * source, __global uint2 * destination, const __global int * sourceIndexes, __global int * destinationIndexes)
 {
 	const int lid = get_local_id(0);
@@ -479,9 +480,9 @@ __kernel   void FluffyRecovery(const u64 v0i, const u64 v1i, const u64 v2i, cons
 
 	barrier(CLK_LOCAL_MEM_FENCE);
 
-	for (int i = 0; i < 1024; i += EDGE_BLOCK_SIZE)
+	for (int i = 0; i < 32; i += EDGE_BLOCK_SIZE)
 	{
-		u64 blockNonce = gid * 1024 + i;
+		u64 blockNonce = gid * 32 + i;
 
 		v0 = v0i;
 		v1 = v1i;
@@ -532,7 +533,7 @@ __kernel   void FluffyRecovery(const u64 v0i, const u64 v1i, const u64 v2i, cons
 // ---------------
 #define BKT_OFFSET 255
 #define BKT_STEP 32
-__attribute__((reqd_work_group_size(1024, 1, 1)))
+__attribute__((reqd_work_group_size(256, 1, 1)))
 __kernel   void FluffyRoundNO1(const __global uint2 * source, __global uint2 * destination, const __global int * sourceIndexes, __global int * destinationIndexes)
 {
 	const int lid = get_local_id(0);
@@ -593,7 +594,7 @@ __kernel   void FluffyRoundNO1(const __global uint2 * source, __global uint2 * d
 
 }
 
-__attribute__((reqd_work_group_size(1024, 1, 1)))
+__attribute__((reqd_work_group_size(256, 1, 1)))
 __kernel   void FluffyRoundNON(const __global uint2 * source, __global uint2 * destination, const __global int * sourceIndexes, __global int * destinationIndexes)
 {
 	const int lid = get_local_id(0);
@@ -654,7 +655,7 @@ __kernel   void FluffyRoundNON(const __global uint2 * source, __global uint2 * d
 
 }
 
-__attribute__((reqd_work_group_size(1024, 1, 1)))
+__attribute__((reqd_work_group_size(256, 1, 1)))
 __kernel void FluffyTailO(const __global uint2 * source, __global uint2 * destination, const __global int * sourceIndexes, __global int * destinationIndexes)
 {
 	const int lid = get_local_id(0);
