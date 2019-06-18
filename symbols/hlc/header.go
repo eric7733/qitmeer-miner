@@ -36,13 +36,15 @@ type BlockHeader struct {
 	// Nonce
 	Nonce uint64 `json:"nonce"`
 
+	Nonces []*uint32 `json:"nonces"`
+
 	Target string `json:"target"`
 
 	Coinbasevalue   int64 `json:"coinbasevalue"`
 	HasCoinbasePack bool
 }
 
-//nox block header
+//hlc block header
 func (h *BlockHeader) BlockData() []byte {
 	buf := bytes.NewBuffer(make([]byte, 0, MaxBlockHeaderPayload))
 	// TODO, redefine the protocol version and storage
@@ -54,7 +56,7 @@ func (h *BlockHeader) BlockData() []byte {
 func writeBlockHeader(w io.Writer, pver uint32, bh *BlockHeader) error {
 	sec := uint64(bh.Curtime)
 	return s.WriteElements(w, bh.Version, &bh.ParentRoot, &bh.TxRoot,
-		&bh.StateRoot, bh.Difficulty, bh.Height, sec, bh.Nonce)
+		&bh.StateRoot, bh.Difficulty, bh.Height, sec, bh.Nonce,bh.Nonces)
 }
 
 //block hash
